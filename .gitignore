@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 stem_library.json
+history.json
 *.tmp
 server.out
 server.err

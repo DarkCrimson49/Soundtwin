@@ -456,14 +456,23 @@ def technique_rank(job, src_path, dur, speed, seed, shortlist, say):
     return out[:10]
 
 
-def run_job(job, src_path=None, url=None):
+def run_job(job, src_path=None, url=None, dz_id=None):
     def say(msg):
         job["steps"].append(msg)
 
     work = job["dir"]
     try:
         label = job.get("name")
-        if url:
+        if dz_id:  # a song picked from For You / Most searched
+            say("Fetching a preview of the song")
+            t = dz(f"track/{dz_id}")
+            if not t.get("preview"):
+                raise RuntimeError("That song has no preview to analyse.")
+            src_path = os.path.join(work, "src.mp3")
+            with open(src_path, "wb") as f:
+                f.write(fetch(t["preview"]))
+            label = f"{t.get('title')} - {(t.get('artist') or {}).get('name')}"
+        elif url:
             say("Downloading audio from the link")
             src_path, label = download(url, work)
         say("Converting audio")
@@ -540,6 +549,10 @@ def run_job(job, src_path=None, url=None):
             say(f"Stem comparison unavailable ({str(e)[:80]}) - showing overall sound match instead")
         result["hidden_covers"] = hidden
         result["bpm"] = round(ref["bpm"]) if ref else None
+        try:
+            record_search(seed or {**match, "link": match.get("shazam")}, result["similar"])
+        except Exception:
+            pass
         job["result"] = result
     except Exception as e:  # surface a readable message to the page
         msg = str(e)
@@ -570,6 +583,8 @@ def analyze():
         f.save(path)
         job["name"] = f.filename
         args = {"src_path": path}
+    elif (request.form.get("deezer_id") or "").isdigit():
+        args = {"dz_id": int(request.form["deezer_id"])}
     elif re.match(r"^https?://", url, re.I):
         args = {"url": url}
     else:
@@ -578,6 +593,85 @@ def analyze():
     JOBS[job_id] = job
     threading.Thread(target=run_job, args=(job,), kwargs=args, daemon=True).start()
     return jsonify(id=job_id)
+
+
+# ---------------------------------------------------------------- history, For You, Most searched
+
+HISTORY_PATH = os.path.join(HERE, "history.json")
+_hist_lock = threading.Lock()
+_trending = {"at": 0, "items": []}
+
+
+def _slim(t):
+    return {k: t.get(k) for k in ("id", "title", "artist", "art", "link")}
+
+
+def _key(t):
+    return str(t["id"]) if t.get("id") else norm(t.get("title")) + "|" + (t.get("artist") or "").lower()
+
+
+def load_history():
+    with _hist_lock:
+        try:
+            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+
+def record_search(track, similar):
+    """Remember what was searched and what it matched, to build For You / Most searched."""
+    hist = load_history()
+    hist.append({
+        "ts": int(time.time()),
+        "track": _slim(track),
+        "similar": [{**_slim(s), "score": s.get("score") or 0} for s in similar or []],
+    })
+    with _hist_lock:
+        tmp = HISTORY_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(hist[-300:], f)
+        os.replace(tmp, HISTORY_PATH)
+
+
+def trending():
+    if time.time() - _trending["at"] > 3600:
+        try:
+            items = [dz_track(t) for t in (dz("chart/0/tracks", limit=10).get("data") or [])]
+            _trending.update(at=time.time(), items=[_slim(t) for t in items])
+        except Exception:
+            pass
+    return _trending["items"]
+
+
+@app.get("/api/home")
+def home():
+    hist = load_history()
+    counts, latest, searched = {}, {}, {}
+    for h in hist:
+        k = _key(h["track"])
+        counts[k] = counts.get(k, 0) + 1
+        latest[k] = h["ts"]
+        searched[k] = h["track"]
+    top = sorted(counts, key=lambda k: (counts[k], latest[k]), reverse=True)[:8]
+
+    # For You: songs that keep turning up as close matches to what was searched,
+    # with recent searches counting more, minus songs already searched.
+    scores, info = {}, {}
+    for age, h in enumerate(reversed(hist)):
+        weight = 0.9 ** age
+        for s in h["similar"]:
+            k = _key(s)
+            if k in searched:
+                continue
+            scores[k] = scores.get(k, 0) + weight * (s.get("score") or 0)
+            info[k] = s
+    fyp = sorted(scores, key=scores.get, reverse=True)[:8]
+    return jsonify(
+        top=[{**searched[k], "count": counts[k]} for k in top],
+        fyp=[_slim(info[k]) for k in fyp],
+        trending=trending() if len(fyp) < 8 else [],
+    )
 
 
 @app.get("/api/preview/<int:track_id>")

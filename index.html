@@ -6,7 +6,7 @@
 <title>SoundTwin</title>
 <style>
   :root {
-    --bg: #090a0f; --glass: rgba(255,255,255,.035); --glass2: rgba(255,255,255,.06);
+    --bg: #070a14; --glass: rgba(10,15,32,.6); --glass2: rgba(40,60,110,.35);
     --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.16);
     --text: #f1f2f6; --muted: #9096a8; --dim: #62687a;
     --mint: #6ff2c2; --violet: #9d8cff; --ink: #06150f;
@@ -21,14 +21,57 @@
     font: 15px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  body::before {
-    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  /* ---------- blue wave background */
+  .waves {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
     background:
-      radial-gradient(700px 420px at 12% -8%, rgba(111,242,194,.13), transparent 70%),
-      radial-gradient(760px 480px at 95% 4%, rgba(157,140,255,.15), transparent 70%),
-      radial-gradient(900px 500px at 50% 110%, rgba(108,182,255,.07), transparent 70%);
+      radial-gradient(900px 520px at 15% -10%, rgba(64,140,255,.22), transparent 70%),
+      radial-gradient(900px 560px at 92% 0%, rgba(90,110,255,.18), transparent 70%),
+      linear-gradient(180deg, #070a14 0%, #08112a 55%, #0a1a44 100%);
   }
-  main { max-width: 920px; margin: 0 auto; padding: 44px 18px 90px; }
+  .waves svg { position: absolute; left: 0; bottom: 0; width: 200%; animation: drift linear infinite; }
+  .waves svg:nth-child(1) { height: 56vh; animation-duration: 46s; opacity: .4; }
+  .waves svg:nth-child(2) { height: 40vh; animation-duration: 34s; animation-direction: reverse; opacity: .4; }
+  .waves svg:nth-child(3) { height: 24vh; animation-duration: 24s; opacity: .45; }
+  @keyframes drift { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .waves svg { animation: none; } }
+
+  /* ---------- layout: For You | search | Most searched */
+  .shell {
+    display: grid; grid-template-columns: 280px minmax(0, 860px) 280px; gap: 26px;
+    justify-content: center; align-items: start; padding: 44px 22px 90px;
+  }
+  main { min-width: 0; }
+  .side { position: sticky; top: 22px; padding: 16px; margin-top: 84px; }
+  .side h3 {
+    margin: 2px 4px 4px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+  }
+  .side h3 svg { color: #7cc8ff; }
+  .side .hint { color: var(--muted); font-size: 12.5px; margin: 0 4px 10px; }
+  .side h4 { font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; color: var(--dim); margin: 14px 4px 6px; font-weight: 600; }
+  .mini {
+    display: grid; grid-template-columns: 44px 1fr auto; gap: 11px; align-items: center;
+    padding: 7px 6px; border-radius: 12px; transition: .15s;
+  }
+  .mini:hover { background: var(--glass2); }
+  .mini .cover { width: 44px; height: 44px; border-radius: 8px; }
+  .mini .pick {
+    all: unset; cursor: pointer; display: block; min-width: 0; width: 100%;
+  }
+  .mini .t { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini .a { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini .pick:hover .t { color: #7cc8ff; }
+  .mini .pick:focus-visible { outline: 2px solid #7cc8ff; outline-offset: 3px; border-radius: 6px; }
+  .mini .n {
+    font-size: 11px; font-weight: 700; color: #9fd0ff; background: rgba(108,182,255,.14);
+    border-radius: 99px; padding: 2px 8px;
+  }
+  @media (max-width: 1320px) {
+    .shell { grid-template-columns: 1fr 1fr; max-width: 900px; margin: 0 auto; }
+    main { grid-column: 1 / -1; order: -1; }
+    .side { position: static; margin-top: 0; }
+  }
+  @media (max-width: 640px) { .shell { grid-template-columns: 1fr; padding: 28px 14px 70px; } }
   a { color: inherit; }
   svg { display: block; }
 
@@ -181,7 +224,7 @@
     background: conic-gradient(var(--mint) calc(var(--p) * 1%), rgba(255,255,255,.08) 0);
     display: flex; align-items: center; justify-content: center; flex-direction: column;
   }
-  .ring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #12141b; }
+  .ring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #0c1226; }
   .ring b { position: relative; font-size: 17px; line-height: 1; }
   .ring small { position: relative; font-size: 9px; color: var(--muted); letter-spacing: .5px; margin-top: 2px; }
   footer { color: var(--dim); font-size: 12px; text-align: center; margin-top: 50px; }
@@ -198,6 +241,13 @@
 </style>
 </head>
 <body>
+<div class="waves" aria-hidden="true">
+  <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path fill="#123a8f" d="M0,150 C240,60 480,240 720,150 C960,60 1200,240 1440,150 C1680,60 1920,240 2160,150 C2400,60 2640,240 2880,150 V320 H0 Z"/></svg>
+  <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path fill="#1a56c4" d="M0,170 C180,110 540,230 720,170 C900,110 1260,230 1440,170 C1620,110 1980,230 2160,170 C2340,110 2700,230 2880,170 V320 H0 Z"/></svg>
+  <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path fill="#2f7df0" d="M0,190 C240,130 480,250 720,190 C960,130 1200,250 1440,190 C1680,130 1920,250 2160,190 C2400,130 2640,250 2880,190 V320 H0 Z"/></svg>
+</div>
+<div class="shell">
+<aside class="panel side" id="fyp"></aside>
 <main>
   <header>
     <div class="logo"><i></i><i></i><i></i><i></i><i></i></div>
@@ -223,6 +273,8 @@
   <div id="out"></div>
   <footer>Matches by Shazam · catalog and previews by Deezer · stem separation by Demucs</footer>
 </main>
+<aside class="panel side" id="top"></aside>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -259,12 +311,18 @@ drop.addEventListener('drop', ev => { if (ev.dataTransfer.files[0]) setFile(ev.d
 urlIn.oninput = () => { if (urlIn.value && file) setFile(null); };
 urlIn.onkeydown = e => { if (e.key === 'Enter') go.click(); };
 
-go.onclick = async () => {
-  $('err').textContent = ''; $('out').innerHTML = ''; $('steps').innerHTML = '';
-  if (player) player.pause();
+go.onclick = () => {
   const fd = new FormData();
   if (file) fd.append('file', file); else fd.append('url', urlIn.value.trim());
+  search(fd);
+};
+
+async function search(fd) {
+  if (go.disabled) return;
+  $('err').textContent = ''; $('out').innerHTML = ''; $('steps').innerHTML = '';
+  if (player) { player.pause(); if (playingBtn) playingBtn.classList.remove('on'); playingBtn = null; }
   go.disabled = true; go.textContent = 'Listening…';
+  window.scrollTo({ top: 0 });
   try {
     const r = await fetch('/api/analyze', { method: 'POST', body: fd });
     const j = await r.json();
@@ -272,7 +330,42 @@ go.onclick = async () => {
     await poll(j.id);
   } catch (e) { $('err').textContent = e.message; }
   go.disabled = false; go.textContent = 'Find it';
-};
+  loadHome();
+}
+
+// ---------- side panels: For You (left) and Most searched (right)
+const ICON_SPARK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7L12 2Z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15Z"/></svg>';
+const ICON_TREND = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>';
+const mini = (t, extra = '') => `<div class="mini">
+  ${cover(t, 18)}
+  ${Number.isInteger(t.id)
+    ? `<button class="pick" data-id="${t.id}" title="Find songs played like this one"><div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist)}</div></button>`
+    : `<div style="min-width:0"><div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist)}</div></div>`}
+  ${extra}</div>`;
+
+async function loadHome() {
+  let h;
+  try { h = await (await fetch('/api/home')).json(); } catch { return; }
+  let left = `<h3>${ICON_SPARK}For you</h3>`;
+  if (h.fyp.length) left += `<p class="hint">Picked from what your searches sound like.</p>` + h.fyp.map(t => mini(t)).join('');
+  else left += `<p class="hint">Search a few songs and picks based on them will show up here.</p>`;
+  const fill = h.trending.slice(0, 8 - h.fyp.length);
+  if (fill.length) left += `<h4>Popular right now</h4>` + fill.map(t => mini(t)).join('');
+  $('fyp').innerHTML = left;
+
+  $('top').innerHTML = `<h3>${ICON_TREND}Most searched</h3>` + (h.top.length
+    ? `<p class="hint">The songs you look up most on this PC.</p>` + h.top.map(t => mini(t, `<span class="n" title="Searched ${t.count} time${t.count > 1 ? 's' : ''}">×${t.count}</span>`)).join('')
+    : `<p class="hint">The songs you look up most will be counted here.</p>`);
+}
+loadHome();
+
+document.addEventListener('click', e => {
+  const p = e.target.closest('.pick');
+  if (!p) return;
+  const fd = new FormData();
+  fd.append('deezer_id', p.dataset.id);
+  search(fd);
+});
 
 async function poll(id) {
   for (;;) {
