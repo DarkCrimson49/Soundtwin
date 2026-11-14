@@ -6,101 +6,214 @@
 <title>SoundTwin</title>
 <style>
   :root {
-    --bg: #0e0f13; --panel: #171920; --panel2: #1f222b; --line: #2b2f3a;
-    --text: #eceef3; --muted: #8e94a3; --accent: #7cf0c1; --accent-ink: #06281c;
+    --bg: #090a0f; --glass: rgba(255,255,255,.035); --glass2: rgba(255,255,255,.06);
+    --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.16);
+    --text: #f1f2f6; --muted: #9096a8; --dim: #62687a;
+    --mint: #6ff2c2; --violet: #9d8cff; --ink: #06150f;
     --warn: #ffc46b; --bad: #ff8c8c;
+    --drums: #ffb454; --bass: #b48cff; --other: #6cb6ff; --vocals: #ff7eb6;
+    --grad: linear-gradient(100deg, var(--mint), #7cc8ff 55%, var(--violet));
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    margin: 0; background: var(--bg); color: var(--text); min-height: 100vh;
+    font: 15px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 860px; margin: 0 auto; padding: 40px 16px 80px; }
-  h1 { font-size: 30px; margin: 0; letter-spacing: -0.5px; }
-  h1 span { color: var(--accent); }
-  .sub { color: var(--muted); margin: 6px 0 28px; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(700px 420px at 12% -8%, rgba(111,242,194,.13), transparent 70%),
+      radial-gradient(760px 480px at 95% 4%, rgba(157,140,255,.15), transparent 70%),
+      radial-gradient(900px 500px at 50% 110%, rgba(108,182,255,.07), transparent 70%);
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 44px 18px 90px; }
+  a { color: inherit; }
+  svg { display: block; }
+
+  /* ---------- header */
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 14px; background: var(--grad); flex: none;
+    display: flex; align-items: center; justify-content: center; gap: 3px;
+    box-shadow: 0 8px 30px rgba(111,242,194,.25);
+  }
+  .logo i { width: 4px; border-radius: 2px; background: var(--ink); }
+  .logo i:nth-child(1) { height: 12px; } .logo i:nth-child(2) { height: 24px; }
+  .logo i:nth-child(3) { height: 17px; } .logo i:nth-child(4) { height: 26px; }
+  .logo i:nth-child(5) { height: 10px; }
+  h1 { font-size: 30px; margin: 0; letter-spacing: -.8px; font-weight: 700; line-height: 1; }
+  h1 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .tag { color: var(--muted); margin: 14px 0 26px; font-size: 16px; max-width: 620px; }
+
+  /* ---------- panels */
+  .panel {
+    background: var(--glass); border: 1px solid var(--line); border-radius: 20px; padding: 20px;
+    backdrop-filter: blur(14px);
+  }
   #drop {
-    border: 2px dashed var(--line); border-radius: 12px; padding: 30px 16px; text-align: center;
-    cursor: pointer; color: var(--muted); transition: .15s;
+    border: 1.5px dashed var(--line2); border-radius: 16px; padding: 30px 16px; text-align: center;
+    cursor: pointer; color: var(--muted); transition: .18s; background: rgba(255,255,255,.015);
   }
-  #drop:hover, #drop.over { border-color: var(--accent); color: var(--text); background: var(--panel2); }
-  #drop b { color: var(--text); }
-  .or { text-align: center; color: var(--muted); font-size: 12px; margin: 12px 0; letter-spacing: 1px; }
+  #drop svg { margin: 0 auto 10px; color: var(--mint); transition: .18s; }
+  #drop:hover, #drop.over { border-color: var(--mint); background: rgba(111,242,194,.06); color: var(--text); }
+  #drop:hover svg, #drop.over svg { transform: translateY(-3px); }
+  #drop.has { border-style: solid; border-color: rgba(111,242,194,.5); background: rgba(111,242,194,.06); }
+  #drop b { color: var(--text); font-weight: 600; font-size: 16px; display: block; word-break: break-word; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--dim); font-size: 12px; margin: 16px 0; letter-spacing: 1.5px; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .row { display: flex; gap: 10px; }
+  .field { flex: 1; min-width: 0; position: relative; }
+  .field svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--dim); }
   input[type=text] {
-    flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); color: var(--text);
-    border-radius: 10px; padding: 11px 13px; font: inherit; outline: none;
+    width: 100%; background: rgba(0,0,0,.35); border: 1px solid var(--line); color: var(--text);
+    border-radius: 13px; padding: 13px 14px 13px 42px; font: inherit; outline: none; transition: .15s;
   }
-  input[type=text]:focus { border-color: var(--accent); }
+  input[type=text]::placeholder { color: var(--dim); }
+  input[type=text]:focus { border-color: var(--mint); box-shadow: 0 0 0 4px rgba(111,242,194,.12); }
+  button { font: inherit; }
   button.go {
-    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px;
-    padding: 0 20px; font: 600 15px inherit; cursor: pointer; white-space: nowrap;
+    background: var(--grad); color: var(--ink); border: 0; border-radius: 13px; padding: 0 26px;
+    font-weight: 700; cursor: pointer; white-space: nowrap; transition: .15s;
+    box-shadow: 0 6px 24px rgba(111,242,194,.22);
   }
-  button.go:disabled { opacity: .45; cursor: default; }
-  #steps { margin: 18px 0 0; padding: 0; list-style: none; color: var(--muted); }
-  #steps li { padding: 3px 0; }
-  #steps li::before { content: "✓ "; color: var(--accent); }
-  #steps li.now { color: var(--text); }
-  #steps li.now::before { content: "… "; color: var(--warn); }
-  .err { color: var(--bad); margin-top: 14px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin: 32px 0 10px; }
-  .match { display: flex; gap: 16px; align-items: center; }
-  .match img { width: 120px; height: 120px; border-radius: 10px; object-fit: cover; background: var(--panel2); flex: none; }
-  .match .t { font-size: 22px; font-weight: 600; line-height: 1.2; }
-  .match .a { color: var(--muted); margin-top: 2px; }
-  .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
-  .badge { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 2px 10px; margin: 8px 6px 0 0; }
-  .ok { background: rgba(124,240,193,.14); color: var(--accent); }
-  .wn { background: rgba(255,196,107,.14); color: var(--warn); }
-  .links a { color: var(--accent); margin-right: 14px; font-size: 13px; text-decoration: none; }
-  .links a:hover { text-decoration: underline; }
-  audio { width: 100%; height: 34px; margin-top: 10px; }
-  .note { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
-  .item {
-    display: grid; grid-template-columns: 52px 1fr 130px 36px; gap: 12px; align-items: center;
-    padding: 9px 4px; border-bottom: 1px solid var(--line);
+  button.go:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+  button.go:disabled { opacity: .55; cursor: default; box-shadow: none; }
+
+  /* ---------- progress */
+  #steps { margin: 0; padding: 0; list-style: none; }
+  #steps:not(:empty) { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  #steps li { display: flex; align-items: center; gap: 12px; padding: 5px 0; color: var(--muted); font-size: 14px; }
+  #steps .dot {
+    width: 20px; height: 20px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+    background: rgba(111,242,194,.14); color: var(--mint); font-size: 11px; font-weight: 700;
   }
-  .item:last-child { border-bottom: 0; }
-  .item img { width: 52px; height: 52px; border-radius: 6px; background: var(--panel2); }
-  .item .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item .a { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item a { color: inherit; text-decoration: none; }
-  .item a:hover { text-decoration: underline; }
-  .stems { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 7px; }
-  .stem .sl { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 3px; gap: 4px; white-space: nowrap; }
-  .stem .bar { height: 4px; }
-  .stem .bar i { background: #8fb4ff; }
-  @media (max-width: 560px) { .stems { grid-template-columns: repeat(2, 1fr); } }
-  .bar { height: 6px; background: var(--panel2); border-radius: 9px; overflow: hidden; }
-  .bar i { display: block; height: 100%; background: var(--accent); }
-  .pct { font-size: 12px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  #steps li.now { color: var(--text); font-weight: 600; }
+  #steps li.now .dot { background: none; gap: 2px; align-items: flex-end; height: 16px; }
+  #steps li.now .dot i { width: 3px; background: var(--mint); border-radius: 1px; animation: eq .9s ease-in-out infinite; }
+  #steps li.now .dot i:nth-child(2) { animation-delay: .2s; } #steps li.now .dot i:nth-child(3) { animation-delay: .4s; }
+  @keyframes eq { 0%, 100% { height: 4px; } 50% { height: 15px; } }
+  .err:not(:empty) {
+    margin-top: 16px; color: var(--bad); background: rgba(255,140,140,.08);
+    border: 1px solid rgba(255,140,140,.25); border-radius: 12px; padding: 10px 14px; font-size: 14px;
+  }
+
+  /* ---------- results */
+  #out > * { animation: rise .45s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.6px; color: var(--muted);
+    margin: 38px 0 12px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+  }
+  h2::before { content: ""; width: 18px; height: 2px; border-radius: 2px; background: var(--grad); }
+  .note { color: var(--muted); font-size: 13.5px; margin: -4px 0 14px; max-width: 700px; }
+
+  .hero { position: relative; overflow: hidden; padding: 22px; display: flex; gap: 22px; align-items: center; }
+  .hero .bg {
+    position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover;
+    filter: blur(60px) saturate(1.5); opacity: .28; pointer-events: none;
+  }
+  .hero > *:not(.bg) { position: relative; }
+  .cover { position: relative; flex: none; border-radius: 14px; overflow: hidden; background: var(--glass2); }
+  .hero .cover { width: 150px; height: 150px; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+  .cover img { width: 100%; height: 100%; object-fit: cover; }
+  .hero .t { font-size: 27px; font-weight: 700; line-height: 1.15; letter-spacing: -.4px; }
+  .hero .a { color: #c9cddb; font-size: 17px; margin-top: 3px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    border-radius: 99px; padding: 4px 11px; border: 1px solid;
+  }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .ok { background: rgba(111,242,194,.1); color: var(--mint); border-color: rgba(111,242,194,.25); }
+  .wn { background: rgba(255,196,107,.1); color: var(--warn); border-color: rgba(255,196,107,.25); }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .links a {
+    font-size: 13px; text-decoration: none; padding: 6px 13px; border-radius: 99px;
+    background: var(--glass2); border: 1px solid var(--line); color: var(--text); transition: .15s;
+  }
+  .links a:hover { border-color: var(--mint); color: var(--mint); }
+
+  /* ---------- play buttons */
   .play {
-    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel2);
-    color: var(--text); cursor: pointer; font-size: 13px;
+    border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #fff; transition: .15s; padding: 0;
   }
-  .play:hover { border-color: var(--accent); }
-  .play.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  @media (max-width: 560px) {
-    .match { flex-direction: column; align-items: flex-start; }
-    .item { grid-template-columns: 44px 1fr 36px; }
-    .item .score { grid-column: 2 / 4; grid-row: 2; }
-    .item img { width: 44px; height: 44px; }
-    .row { flex-direction: column; } button.go { padding: 11px; }
+  .play .i-stop, .play .i-x, .play.on .i-play, .play.bad .i-play { display: none; }
+  .play.on .i-stop, .play.bad .i-x { display: block; }
+  .cover .play { position: absolute; inset: 0; width: 100%; height: 100%; background: rgba(0,0,0,.38); opacity: 0; }
+  .hero .cover .play { opacity: 1; background: rgba(0,0,0,.25); }
+  .cover:hover .play, .cover .play.on, .cover .play.bad, .cover .play:focus-visible { opacity: 1; }
+  .cover .play:hover { background: rgba(0,0,0,.5); }
+  .cover .play.on { background: rgba(111,242,194,.55); color: var(--ink); }
+  .hero .play span {
+    width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,.95); color: #0b0c10;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  }
+  .hero .play.on span { background: var(--mint); }
+  .hero .play:hover span { transform: scale(1.06); }
+
+  /* ---------- top 10 list */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .item {
+    display: grid; grid-template-columns: 30px 64px 1fr 64px; gap: 16px; align-items: center;
+    background: var(--glass); border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px 14px 14px;
+    transition: .18s;
+  }
+  .item:hover { background: var(--glass2); border-color: var(--line2); transform: translateY(-1px); }
+  .rank { font-size: 20px; font-weight: 700; color: var(--dim); text-align: center; font-variant-numeric: tabular-nums; }
+  .item:nth-child(-n+3) .rank { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .item .cover { width: 64px; height: 64px; border-radius: 10px; }
+  .item .t { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .t a { text-decoration: none; }
+  .item .t a:hover { text-decoration: underline; }
+  .item .a { color: var(--muted); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .a span { color: var(--dim); }
+  .stems { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 9px; }
+  .sl { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; gap: 4px; white-space: nowrap; }
+  .sl b { color: var(--text); font-weight: 600; }
+  .bar { height: 4px; background: rgba(255,255,255,.07); border-radius: 9px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 9px; background: var(--c, var(--mint)); }
+  .ring {
+    --p: 0; width: 58px; height: 58px; border-radius: 50%; justify-self: end; position: relative;
+    background: conic-gradient(var(--mint) calc(var(--p) * 1%), rgba(255,255,255,.08) 0);
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+  }
+  .ring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #12141b; }
+  .ring b { position: relative; font-size: 17px; line-height: 1; }
+  .ring small { position: relative; font-size: 9px; color: var(--muted); letter-spacing: .5px; margin-top: 2px; }
+  footer { color: var(--dim); font-size: 12px; text-align: center; margin-top: 50px; }
+
+  @media (max-width: 640px) {
+    .hero { flex-direction: column; align-items: flex-start; }
+    .row { flex-direction: column; } button.go { padding: 13px; }
+    .item { grid-template-columns: 52px 1fr 50px; gap: 12px; padding: 12px; }
+    .rank { display: none; }
+    .item .cover { width: 52px; height: 52px; }
+    .stems { grid-template-columns: repeat(2, 1fr); }
+    .ring { width: 48px; height: 48px; } .ring b { font-size: 14px; }
   }
 </style>
 </head>
 <body>
 <main>
-  <h1>Sound<span>Twin</span></h1>
-  <p class="sub">Drop in a clip or a link. Get the original recording — not a cover — and songs that sound like it.</p>
+  <header>
+    <div class="logo"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1>Sound<span>Twin</span></h1>
+  </header>
+  <p class="tag">Drop in a clip or paste a link. Get the original recording, not a cover, and the ten songs played most like it.</p>
 
   <div class="panel">
-    <div id="drop"><b>Drop an .mp3 or .mp4 here</b><br>or click to choose a file</div>
+    <div id="drop"></div>
     <input type="file" id="file" accept="audio/*,video/*,.mp3,.mp4,.m4a,.wav,.mov,.webm" hidden>
     <div class="or">OR</div>
     <div class="row">
-      <input type="text" id="url" placeholder="Paste a YouTube or TikTok link" autocomplete="off">
+      <div class="field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+        <input type="text" id="url" placeholder="Paste a YouTube or TikTok link" autocomplete="off">
+      </div>
       <button class="go" id="go">Find it</button>
     </div>
     <ul id="steps"></ul>
@@ -108,6 +221,7 @@
   </div>
 
   <div id="out"></div>
+  <footer>Matches by Shazam · catalog and previews by Deezer · stem separation by Demucs</footer>
 </main>
 
 <script>
@@ -120,11 +234,23 @@ const safeUrl = u => /^https?:\/\//i.test(u || '') ? esc(u) : '';
 // preview links expire quickly, so play through the app, which fetches a fresh one each time
 const pv = t => Number.isInteger(t.id) ? '/api/preview/' + t.id : safeUrl(t.preview);
 
+const ICON_UP = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
+const ICON_FILE = '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+const playBtn = (t, size) => !pv(t) ? '' : `<button class="play" data-src="${pv(t)}" title="Play preview" aria-label="Play preview"><span>
+  <svg class="i-play" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>
+  <svg class="i-stop" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>
+  <svg class="i-x" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>
+</span></button>`;
+const cover = (t, size) => `<div class="cover">${safeUrl(t.art) ? `<img src="${safeUrl(t.art)}" alt="" loading="lazy">` : ''}${playBtn(t, size)}</div>`;
+
 function setFile(f) {
   file = f;
-  drop.innerHTML = f ? `<b>${esc(f.name)}</b><br>ready — press Find it` : '<b>Drop an .mp3 or .mp4 here</b><br>or click to choose a file';
+  drop.classList.toggle('has', !!f);
+  drop.innerHTML = f ? `${ICON_FILE}<b>${esc(f.name)}</b>ready — press Find it`
+                     : `${ICON_UP}<b>Drop an .mp3 or .mp4 here</b>or click to choose a file`;
   if (f) urlIn.value = '';
 }
+setFile(null);
 drop.onclick = () => fileIn.click();
 fileIn.onchange = () => setFile(fileIn.files[0] || null);
 ['dragover', 'dragenter'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
@@ -135,23 +261,26 @@ urlIn.onkeydown = e => { if (e.key === 'Enter') go.click(); };
 
 go.onclick = async () => {
   $('err').textContent = ''; $('out').innerHTML = ''; $('steps').innerHTML = '';
+  if (player) player.pause();
   const fd = new FormData();
   if (file) fd.append('file', file); else fd.append('url', urlIn.value.trim());
-  go.disabled = true;
+  go.disabled = true; go.textContent = 'Listening…';
   try {
     const r = await fetch('/api/analyze', { method: 'POST', body: fd });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'Could not start');
     await poll(j.id);
   } catch (e) { $('err').textContent = e.message; }
-  go.disabled = false;
+  go.disabled = false; go.textContent = 'Find it';
 };
 
 async function poll(id) {
   for (;;) {
     const j = await (await fetch('/api/job/' + id)).json();
-    $('steps').innerHTML = j.steps.map((s, i) =>
-      `<li class="${!j.done && i === j.steps.length - 1 ? 'now' : ''}">${esc(s)}</li>`).join('');
+    $('steps').innerHTML = j.steps.map((s, i) => {
+      const now = !j.done && i === j.steps.length - 1;
+      return `<li class="${now ? 'now' : ''}"><span class="dot">${now ? '<i></i><i></i><i></i>' : '✓'}</span>${esc(s)}</li>`;
+    }).join('');
     if (j.done) {
       if (j.error) throw new Error(j.error);
       return render(j.result);
@@ -160,6 +289,21 @@ async function poll(id) {
   }
 }
 
+const yt = q => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+
+function hero(t, meta, badges, links) {
+  return `<div class="panel hero">
+    ${safeUrl(t.art) ? `<img class="bg" src="${safeUrl(t.art)}" alt="">` : ''}
+    ${cover(t, 26)}
+    <div style="min-width:0;flex:1">
+      <div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist)}</div>
+      ${meta ? `<div class="meta">${meta}</div>` : ''}
+      <div class="badges">${badges}</div>
+      <div class="links">${links}<a href="${esc(yt(t.artist + ' ' + t.title))}" target="_blank" rel="noopener">YouTube</a></div>
+    </div></div>`;
+}
+const link = (u, label) => safeUrl(u) ? `<a href="${safeUrl(u)}" target="_blank" rel="noopener">${label}</a>` : '';
+
 function render(r) {
   const out = $('out');
   if (!r.match) {
@@ -167,49 +311,26 @@ function render(r) {
     return;
   }
   const m = r.match, o = r.original;
-  const yt = q => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
-  let badges = '';
-  if (m.cover) badges += `<span class="badge wn">Cover / altered version (“${esc(m.cover)}”)</span>`;
-  else badges += `<span class="badge ok">Original recording</span>`;
+  let badges = m.cover ? `<span class="badge wn">Cover / altered version (“${esc(m.cover)}”)</span>`
+                       : `<span class="badge ok">Original recording</span>`;
   if (r.speed !== 1) badges += `<span class="badge wn">Your clip is ${r.speed > 1 ? 'sped up' : 'slowed'} ×${r.speed}</span>`;
-  const meta = [m.album, m.year, m.genre, r.bpm ? `~${r.bpm} BPM` : ''].filter(Boolean).map(esc).join(' · ');
+  const meta = [m.album, m.year, m.genre, r.bpm ? `~${r.bpm} BPM` : ''].filter(Boolean).map(esc).join('  ·  ');
 
-  let html = `<h2>${m.cover ? 'What your clip contains' : 'Exact match'}</h2>
-  <div class="panel"><div class="match">
-    ${safeUrl(m.art) ? `<img src="${safeUrl(m.art)}" alt="">` : ''}
-    <div style="min-width:0;flex:1">
-      <div class="t">${esc(m.title)}</div><div class="a">${esc(m.artist)}</div>
-      <div class="meta">${meta}</div>${badges}
-      <div class="links" style="margin-top:10px">
-        ${safeUrl(m.shazam) ? `<a href="${safeUrl(m.shazam)}" target="_blank" rel="noopener">Shazam</a>` : ''}
-        ${safeUrl(m.deezer) ? `<a href="${safeUrl(m.deezer)}" target="_blank" rel="noopener">Deezer</a>` : ''}
-        <a href="${esc(yt(m.artist + ' ' + m.title))}" target="_blank" rel="noopener">YouTube</a>
-      </div>
-      ${pv(m) ? `<audio controls preload="none" src="${pv(m)}"></audio>` : ''}
-    </div></div></div>`;
+  let html = `<h2>${m.cover ? 'What your clip contains' : 'Exact match'}</h2>` +
+    hero(m, meta, badges, link(m.shazam, 'Shazam') + link(m.deezer, 'Deezer'));
 
   if (m.cover) {
-    html += `<h2>The original</h2><div class="panel">`;
-    html += o ? `<div class="match">
-      ${safeUrl(o.art) ? `<img src="${safeUrl(o.art)}" alt="">` : ''}
-      <div style="min-width:0;flex:1">
-        <div class="t">${esc(o.title)}</div><div class="a">${esc(o.artist)}</div>
-        <div class="meta">${esc(o.album || '')}</div><span class="badge ok">Most likely original</span>
-        <div class="links" style="margin-top:10px">
-          ${safeUrl(o.link) ? `<a href="${safeUrl(o.link)}" target="_blank" rel="noopener">Deezer</a>` : ''}
-          <a href="${esc(yt(o.artist + ' ' + o.title))}" target="_blank" rel="noopener">YouTube</a>
-        </div>
-        ${pv(o) ? `<audio controls preload="none" src="${pv(o)}"></audio>` : ''}
-      </div></div>` : `Couldn't pin down the original automatically.`;
-    html += `</div>`;
+    html += `<h2>The original</h2>` + (o
+      ? hero(o, esc(o.album || ''), `<span class="badge ok">Most likely original</span>`, link(o.link, 'Deezer'))
+      : `<div class="panel">Couldn't pin down the original automatically.</div>`);
   }
 
   const sim = r.similar || [];
   const parts = [['drums', 'Drums'], ['bass', 'Bass'], ['other', 'Guitars & keys'], ['vocals', 'Vocals']];
   const stemRow = s => !s.stems ? '' : `<div class="stems">${parts.map(([k, label]) => {
     const v = s.stems[k];
-    return `<div class="stem"><div class="sl"><span>${label}</span><span>${v == null ? 'none' : v + '%'}</span></div>
-      <div class="bar"><i style="width:${v ?? 0}%"></i></div></div>`;
+    return `<div><div class="sl"><span>${label}</span><b>${v == null ? '–' : v + '%'}</b></div>
+      <div class="bar"><i style="width:${v ?? 0}%;--c:var(--${k})"></i></div></div>`;
   }).join('')}</div>`;
   html += `<h2>${r.stems ? 'Top 10 played most like it' : 'Sounds like it'}</h2>`;
   if (!sim.length) html += `<div class="panel">No similar songs found for this one.</div>`;
@@ -217,29 +338,31 @@ function render(r) {
     html += `<p class="note">${r.stems
       ? 'Your clip and each song were split into drums, bass, guitars &amp; keys and vocals, then compared part by part: tone, rhythm pattern, note density and grit.'
       : 'Different songs, ranked by how close they sound to your clip (tone, harmony and tempo).'}${
-      r.hidden_covers ? ` ${r.hidden_covers} cover/altered version${r.hidden_covers > 1 ? 's' : ''} hidden.` : ''}</p><div class="panel">`;
-    html += sim.map(s => `<div class="item">
-      ${safeUrl(s.art) ? `<img src="${safeUrl(s.art)}" alt="" loading="lazy">` : '<span></span>'}
-      <div style="min-width:0"><div class="t"><a href="${safeUrl(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a></div>
-        <div class="a">${esc(s.artist)}</div>${stemRow(s)}</div>
-      <div class="score">${s.score == null ? '<div class="pct"><span>no preview</span></div>' :
-        `<div class="pct"><span>${s.score}% match</span><span>${s.bpm} BPM</span></div><div class="bar"><i style="width:${s.score}%"></i></div>`}</div>
-      ${pv(s) ? `<button class="play" data-src="${pv(s)}" title="Play preview">▶</button>` : '<span></span>'}
+      r.hidden_covers ? ` ${r.hidden_covers} cover/altered version${r.hidden_covers > 1 ? 's' : ''} hidden.` : ''}</p><div class="list">`;
+    html += sim.map((s, i) => `<div class="item">
+      <div class="rank">${i + 1}</div>
+      ${cover(s, 24)}
+      <div style="min-width:0">
+        <div class="t"><a href="${safeUrl(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a></div>
+        <div class="a">${esc(s.artist)}${s.bpm ? ` <span>· ${s.bpm} BPM</span>` : ''}</div>${stemRow(s)}
+      </div>
+      ${s.score == null ? '<span></span>' : `<div class="ring" style="--p:${s.score}" title="${s.score}% overall match"><b>${s.score}</b><small>MATCH</small></div>`}
     </div>`).join('') + `</div>`;
   }
   out.innerHTML = html;
+  out.scrollIntoView({ block: 'start' });
 }
 
 document.addEventListener('click', e => {
   const b = e.target.closest('.play');
   if (!b) return;
-  if (player) { player.pause(); if (playingBtn) { playingBtn.classList.remove('on'); playingBtn.textContent = '▶'; } }
+  if (player) { player.pause(); if (playingBtn) playingBtn.classList.remove('on'); }
   if (playingBtn === b) { playingBtn = null; return; }
   player = new Audio(b.dataset.src);
-  playingBtn = b; b.classList.add('on'); b.textContent = '■';
-  const reset = () => { b.classList.remove('on'); b.textContent = '▶'; if (playingBtn === b) playingBtn = null; };
+  playingBtn = b; b.classList.remove('bad'); b.classList.add('on');
+  const reset = () => { b.classList.remove('on'); if (playingBtn === b) playingBtn = null; };
   player.onended = reset;
-  player.play().catch(() => { reset(); b.title = 'No preview available for this song'; b.textContent = '✕'; });
+  player.play().catch(() => { reset(); b.classList.add('bad'); b.title = 'No preview available for this song'; });
 });
 </script>
 </body>
