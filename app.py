@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import imageio_ffmpeg
 import numpy as np
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory
 from shazamio import Shazam
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -483,7 +483,7 @@ def run_job(job, src_path=None, url=None):
         match["cover"] = reason
         seed = dz_find(match["title"], match["artist"])
         if seed:
-            match.update(preview=seed["preview"], deezer=seed["link"])
+            match.update(preview=seed["preview"], deezer=seed["link"], id=seed["id"])
             match["art"] = match["art"] or seed["art"]
         result["match"] = match
 
@@ -578,6 +578,20 @@ def analyze():
     JOBS[job_id] = job
     threading.Thread(target=run_job, args=(job,), kwargs=args, daemon=True).start()
     return jsonify(id=job_id)
+
+
+@app.get("/api/preview/<int:track_id>")
+def preview(track_id):
+    """Deezer preview links expire after a few minutes, so look up a fresh one per play."""
+    try:
+        url = dz(f"track/{track_id}").get("preview")
+    except Exception:
+        url = None
+    if not url or not url.startswith("https://"):
+        return jsonify(error="No preview available for this song"), 404
+    resp = redirect(url, code=302)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.get("/api/job/<job_id>")

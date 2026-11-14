@@ -117,6 +117,8 @@ let file = null, player = null, playingBtn = null;
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? esc(u) : '';
+// preview links expire quickly, so play through the app, which fetches a fresh one each time
+const pv = t => Number.isInteger(t.id) ? '/api/preview/' + t.id : safeUrl(t.preview);
 
 function setFile(f) {
   file = f;
@@ -183,7 +185,7 @@ function render(r) {
         ${safeUrl(m.deezer) ? `<a href="${safeUrl(m.deezer)}" target="_blank" rel="noopener">Deezer</a>` : ''}
         <a href="${esc(yt(m.artist + ' ' + m.title))}" target="_blank" rel="noopener">YouTube</a>
       </div>
-      ${safeUrl(m.preview) ? `<audio controls preload="none" src="${safeUrl(m.preview)}"></audio>` : ''}
+      ${pv(m) ? `<audio controls preload="none" src="${pv(m)}"></audio>` : ''}
     </div></div></div>`;
 
   if (m.cover) {
@@ -197,7 +199,7 @@ function render(r) {
           ${safeUrl(o.link) ? `<a href="${safeUrl(o.link)}" target="_blank" rel="noopener">Deezer</a>` : ''}
           <a href="${esc(yt(o.artist + ' ' + o.title))}" target="_blank" rel="noopener">YouTube</a>
         </div>
-        ${safeUrl(o.preview) ? `<audio controls preload="none" src="${safeUrl(o.preview)}"></audio>` : ''}
+        ${pv(o) ? `<audio controls preload="none" src="${pv(o)}"></audio>` : ''}
       </div></div>` : `Couldn't pin down the original automatically.`;
     html += `</div>`;
   }
@@ -222,7 +224,7 @@ function render(r) {
         <div class="a">${esc(s.artist)}</div>${stemRow(s)}</div>
       <div class="score">${s.score == null ? '<div class="pct"><span>no preview</span></div>' :
         `<div class="pct"><span>${s.score}% match</span><span>${s.bpm} BPM</span></div><div class="bar"><i style="width:${s.score}%"></i></div>`}</div>
-      ${safeUrl(s.preview) ? `<button class="play" data-src="${safeUrl(s.preview)}" title="Play preview">▶</button>` : '<span></span>'}
+      ${pv(s) ? `<button class="play" data-src="${pv(s)}" title="Play preview">▶</button>` : '<span></span>'}
     </div>`).join('') + `</div>`;
   }
   out.innerHTML = html;
@@ -234,9 +236,10 @@ document.addEventListener('click', e => {
   if (player) { player.pause(); if (playingBtn) { playingBtn.classList.remove('on'); playingBtn.textContent = '▶'; } }
   if (playingBtn === b) { playingBtn = null; return; }
   player = new Audio(b.dataset.src);
-  player.play();
   playingBtn = b; b.classList.add('on'); b.textContent = '■';
-  player.onended = () => { b.classList.remove('on'); b.textContent = '▶'; playingBtn = null; };
+  const reset = () => { b.classList.remove('on'); b.textContent = '▶'; if (playingBtn === b) playingBtn = null; };
+  player.onended = reset;
+  player.play().catch(() => { reset(); b.title = 'No preview available for this song'; b.textContent = '✕'; });
 });
 </script>
 </body>
