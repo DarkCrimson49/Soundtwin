@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+stem_library.json
+*.tmp
+server.out
+server.err

@@ -1,0 +1,9 @@
+flask
+shazamio
+yt-dlp
+imageio-ffmpeg
+numpy
+julius
+einops
+pyyaml
+tqdm
