@@ -186,6 +186,19 @@
     padding: 10px 18px; cursor: pointer; white-space: nowrap; font-weight: 600; transition: .15s;
   }
   .ghost:hover { border-color: #7cc8ff; }
+  .note .more { color: #9fd0ff; white-space: nowrap; }
+  .fans { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .fan {
+    text-decoration: none; border-radius: 14px; overflow: hidden; background: var(--glass);
+    border: 1px solid var(--line); transition: .15s; display: flex; flex-direction: column;
+  }
+  .fan:hover { border-color: #7cc8ff; transform: translateY(-2px); }
+  .fimg { aspect-ratio: 16 / 9; background: var(--glass2); }
+  .fimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fbody { padding: 11px 14px 13px; }
+  .fbody b { display: block; line-height: 1.3; }
+  .fbody small { color: var(--muted); font-size: 12px; }
+  .fbody .badge { margin-top: 8px; }
   .gnote { color: var(--warn); font-size: 13.5px; margin: 12px 0 0; }
   .also { color: var(--muted); font-size: 14px; margin-top: 16px; }
   .also a { color: #9fd0ff; }
@@ -531,13 +544,14 @@ function renderGame(r) {
   if (!g) {
     $('gout').innerHTML = `<h2>Result</h2><div class="panel">Couldn't tell which game this is. ${r.vision
       ? "Neither the video's text nor its picture settled it."
-      : "The video's title, tags and description don't name a game that the stores list. Turning on picture recognition above lets it look at the footage too."}<div class="meta">${from}</div>${note}</div>`;
+      : "The video's title, tags and description don't name a game that the stores list. Turning on picture recognition above lets it look at the footage too."}<div class="meta">${from}</div>${note}</div>` + fanHtml(r.fan);
+    fixImages();
     return;
   }
   const conf = { high: ['ok', 'Confident match'], medium: ['ok', 'Likely match'], low: ['wn', 'Best guess'] }[g.confidence];
-  const pic = safeUrl(g.image) || safeUrl(v.thumb);
-  let html = `<h2>Game found</h2><div class="panel hero ghero">
-    ${pic ? `<img class="bg" src="${pic}" alt=""><div class="shot"><img src="${pic}" alt=""></div>` : ''}
+  const pic = safeUrl(g.image) || safeUrl(v.thumb), alt = safeUrl(g.image) ? safeUrl(v.thumb) : '';
+  let html = `<h2>${g.confidence === 'low' ? 'Best guess' : 'Game found'}</h2><div class="panel hero ghero">
+    ${pic ? `<img class="bg" src="${pic}" data-alt="${alt}" alt=""><div class="shot"><img src="${pic}" data-alt="${alt}" alt=""></div>` : ''}
     <div style="min-width:0;flex:1">
       <div class="t">${esc(g.name)}</div>
       <div class="why">${g.by_ai ? esc(g.why) : 'Picked because ' + esc(g.why)}.</div>
@@ -550,7 +564,29 @@ function renderGame(r) {
     `</div>`;
   if (r.others.length) html += `<p class="also">Could also be: ${r.others.map(o =>
     `<a href="${safeUrl(o.url)}" target="_blank" rel="noopener">${esc(o.name)}</a>`).join(', ')}</p>`;
-  $('gout').innerHTML = html;
+  $('gout').innerHTML = html + fanHtml(r.fan);
+  fixImages();
+}
+
+// fan-made games from Game Jolt
+function fanHtml(f) {
+  if (!f) return '';
+  return `<h2>Fan-made games on Game Jolt</h2>
+    <p class="note">${f.likely
+      ? 'This series has a lot of fan-made games, and the video doesn’t say which one it is. Fan games aren’t on Steam, so it may be one of these free ones.'
+      : 'If the video shows a fan-made game, it may be one of these.'}
+      <a class="more" href="${safeUrl(f.search)}" target="_blank" rel="noopener">See all on Game Jolt</a></p>
+    <div class="fans">${f.games.map(g => `<a class="fan" href="${safeUrl(g.url)}" target="_blank" rel="noopener">
+      <div class="fimg">${safeUrl(g.image) ? `<img src="${safeUrl(g.image)}" alt="" loading="lazy">` : ''}</div>
+      <div class="fbody"><b>${esc(g.name)}</b><small>${g.by ? 'by ' + esc(g.by) : ''}${g.followers ? ' · ' + g.followers.toLocaleString() + ' followers' : ''}</small>
+        ${g.named ? '<span class="badge ok">Named in the video</span>' : ''}</div></a>`).join('')}</div>`;
+}
+// a picture that fails to load is swapped for its fallback, or removed
+function fixImages() {
+  $('gout').querySelectorAll('img').forEach(img => img.onerror = () => {
+    const alt = img.dataset.alt;
+    if (alt && img.src !== alt) { img.dataset.alt = ''; img.src = alt; } else (img.closest('.shot') || img).remove();
+  });
 }
 
 async function poll(id, stepsEl) {

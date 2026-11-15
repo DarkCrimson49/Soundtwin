@@ -23,7 +23,17 @@ STOP = {
     "playstation", "nintendo", "switch", "mobile", "android", "ios", "4k", "hd", "60fps", "full", "the", "a",
     "review", "reaction", "tutorial", "guide", "tips", "speedrun", "montage", "highlights", "edit", "story",
     "online", "multiplayer", "first", "one", "win", "fun", "love", "war", "hero", "youtube", "tiktok", "twitch",
+    # genre / mood hashtags that are also the literal names of obscure store games
+    "scary", "scarygame", "scarygames", "horror", "horrorgame", "horrorgames", "horrorgaming", "jumpscare",
+    "jumpscares", "creepy", "indiegame", "indiegames", "indie", "fangame", "fangames", "fanmade", "newgame",
+    "mobilegame", "pcgame", "videogame", "videogames", "thegame", "survival", "survivalhorror", "roleplay",
+    "simulator", "animation", "streamer", "facecam", "freeroam", "chase", "chased", "fanmadegame", "funnymoments",
+    "gamingvideos", "gamingontiktok", "gamertok", "gamingtiktok", "fy", "fypage", "xyzbca", "relatable", "capcut",
 }
+
+# Series with a big fan-game scene: a video tagged with the series is often a fan-made game.
+FAN_SERIES = {"fivenightsatfreddys", "undertale", "fridaynightfunkin", "baldisbasicsplus", "poppyplaytime",
+              "bendyandtheinkmachine", "gartenofbanban", "sonicmania", "deltarune"}
 
 # Big games that are not sold on Steam, with where they actually live.
 KNOWN = {
@@ -55,7 +65,14 @@ KNOWN = {
 }
 ALIASES = {"genshin": "Genshin Impact", "honkai star rail": "Honkai: Star Rail", "hsr": "Honkai: Star Rail",
            "zzz": "Zenless Zone Zero", "tarkov": "Escape from Tarkov", "mlbb": "Mobile Legends",
-           "coc": "Clash of Clans", "wow": "World of Warcraft"}
+           "coc": "Clash of Clans", "wow": "World of Warcraft",
+           "fnaf": "Five Nights at Freddy's", "fnf": "Friday Night Funkin'", "gta5": "Grand Theft Auto V",
+           "gtav": "Grand Theft Auto V", "gta": "Grand Theft Auto V", "rdr2": "Red Dead Redemption 2",
+           "cs2": "Counter-Strike 2", "csgo": "Counter-Strike 2", "r6": "Tom Clancy's Rainbow Six Siege",
+           "dbd": "Dead by Daylight", "tf2": "Team Fortress 2", "ow2": "Overwatch 2", "apex": "Apex Legends",
+           "pvz": "Plants vs. Zombies", "ddlc": "Doki Doki Literature Club!", "re4": "Resident Evil 4",
+           "bendy": "Bendy and the Ink Machine", "poppyplaytime": "Poppy Playtime", "mcpe": "Minecraft",
+           "botw": "The Legend of Zelda: Breath of the Wild", "totk": "The Legend of Zelda: Tears of the Kingdom"}
 
 
 def get(url, extra=None, timeout=15):
@@ -112,6 +129,23 @@ def gog_search(term, currency="USD"):
         return []
 
 
+def gamejolt_search(term):
+    """Game Jolt hosts most fan-made games, which never appear on Steam."""
+    try:
+        data = json.loads(get("https://gamejolt.com/site-api/web/search?q=" + urllib.parse.quote(term),
+                              {"Accept": "application/json"}))
+        out = []
+        for g in (data.get("payload") or {}).get("games") or []:
+            if g.get("has_adult_content") or g.get("canceled") or not g.get("slug"):
+                continue
+            out.append({"id": g["id"], "name": g.get("title"), "by": (g.get("developer") or {}).get("username"),
+                        "url": f"https://gamejolt.com/games/{g['slug']}/{g['id']}",
+                        "image": g.get("img_thumbnail"), "followers": g.get("follower_count") or 0})
+        return out
+    except Exception:
+        return []
+
+
 def money(price):
     if not price or price.get("final") is None:
         return None
@@ -140,6 +174,7 @@ def stores(name, steam_item=None):
     if not any(s["store"] == "Epic Games" for s in out):
         out.append({"store": "Epic Games", "url": f"https://store.epicgames.com/en-US/browse?q={q}&sortBy=relevancy",
                     "kind": "search"})
+    out.append({"store": "Game Jolt", "url": f"https://gamejolt.com/search/games?q={q}", "kind": "search"})
 
     g = next((p for p in gog_items if nrm(p.get("title")) == want), None)
     if g and (g.get("storeLink") or g.get("slug")):
@@ -359,11 +394,19 @@ def identify(url, say):
 
     for name in KNOWN:
         consider(name, base_bonus=5)
+    alias_used = None
     for alias, name in ALIASES.items():
-        if spaced(alias) in t_sp or nrm(alias) in tagset:
-            consider_n = nrm(name)
-            if consider_n not in cands:
-                cands[consider_n] = {"name": name, "score": 45, "why": f'the video is tagged "{alias}"', "item": None}
+        a = nrm(alias)
+        # short aliases that are also ordinary words ("wow") only count as hashtags, not title words
+        in_title = spaced(alias) in t_sp and alias not in ("wow", "coc", "apex", "r6", "gta", "bendy", "zzz", "hsr")
+        exact = in_title or a in tagset
+        if exact or (len(a) >= 4 and any(a in t for t in tagset)):
+            n = nrm(name)
+            # a series with lots of fan games stays a best guess: the tag doesn't say which game
+            score = (45 if n in FAN_SERIES else 55) if exact else 40
+            if n not in cands or cands[n]["score"] < score:
+                cands[n] = {"name": name, "score": score, "why": f'the video is tagged "{alias}"', "item": None}
+            alias_used = alias_used or alias
 
     say("Checking names against store catalogs")
     words = [w for w in re.split(r"[^\w'&!:.-]+", title) if w]
@@ -399,15 +442,48 @@ def identify(url, say):
         elif answer:
             note = "Claude looked at the frames but couldn't tell which game it is."
 
+    def fan_games(best):
+        """Fan-made games on Game Jolt that fit the video's tags. Skipped for confident store matches."""
+        series = best and nrm(best["name"]) in FAN_SERIES
+        if best and best["score"] >= 70 and not series:
+            return None
+        short = alias_used or (best["name"] if best else None)
+        extra = [t for t in dict.fromkeys(tags + hashtags)
+                 if len(nrm(t)) >= 4 and nrm(t) not in STOP and nrm(t) != nrm(short or "")][:3]
+        queries = ([f"{short} {t}" for t in extra[:2]] + [short]) if short else extra
+        if not queries:
+            return None
+        say("Looking for fan-made games on Game Jolt")
+        with ThreadPoolExecutor(4) as pool:
+            found = list(pool.map(gamejolt_search, queries))
+        merged, seen_ids = [], set()
+        for results in found:               # most specific query first, best-followed games within it
+            known = [g for g in results[:8] if g["followers"] >= 20] or results[:8]
+            for g in sorted(known, key=lambda g: g["followers"], reverse=True):
+                if g["id"] not in seen_ids:
+                    seen_ids.add(g["id"])
+                    # the video names this exact fan game
+                    g["named"] = nrm(g["name"]) in tagset or (len(nrm(g["name"])) >= 6 and spaced(g["name"]) in t_sp)
+                    merged.append(g)
+        merged.sort(key=lambda g: not g["named"])
+        if not merged:
+            return None
+        return {"games": merged[:6], "likely": bool(series and best["score"] < 70),
+                "search": "https://gamejolt.com/search/games?q=" + urllib.parse.quote(queries[0])}
+
     if not cands:
-        return {"video": video, "game": None, "note": note, "vision": bool(api_key())}
+        return {"video": video, "game": None, "note": note, "vision": bool(api_key()), "fan": fan_games(None)}
 
     ranked = sorted(cands.values(), key=lambda c: c["score"], reverse=True)
     best = ranked[0]
     say(f"Looking up where to get {best['name']}")
     links, item = stores(best["name"], best["item"])
     conf = "high" if best["score"] >= 70 else "medium" if best["score"] >= 50 else "low"
-    image = f"https://cdn.akamai.steamstatic.com/steam/apps/{item['id']}/header.jpg" if item else None
+    image = None
+    if item:   # newer Steam games keep art under a hashed folder, so derive it from the search thumbnail
+        image = re.sub(r"capsule_231x87\.jpg", "header.jpg", item.get("tiny_image") or "") or \
+            f"https://cdn.akamai.steamstatic.com/steam/apps/{item['id']}/header.jpg"
+    fan = fan_games(best)
     others = []
     for c in ranked[1:]:
         if nrm(best["name"]) in nrm(c["name"]) or nrm(c["name"]) in nrm(best["name"]):
@@ -422,4 +498,4 @@ def identify(url, say):
     return {"video": video,
             "game": {"name": best["name"], "why": best["why"], "confidence": conf, "image": image,
                      "by_ai": seen_by_ai and best["why"].startswith("Claude")},
-            "stores": links, "others": others, "note": note, "vision": bool(api_key())}
+            "stores": links, "others": others, "note": note, "vision": bool(api_key()), "fan": fan}
