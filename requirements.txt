@@ -7,3 +7,4 @@ julius
 einops
 pyyaml
 tqdm
+anthropic

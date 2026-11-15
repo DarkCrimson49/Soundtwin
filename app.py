@@ -699,6 +699,27 @@ def run_game_job(job, url):
         job["done"] = True
 
 
+@app.route("/api/vision", methods=["GET", "POST", "DELETE"])
+def vision():
+    """Turn picture recognition on or off by saving / removing an Anthropic API key.
+    The key is stored in a local file next to the app and is never sent back to the page."""
+    import games
+
+    if request.method == "POST":
+        key = (request.form.get("key") or "").strip()
+        if not re.fullmatch(r"sk-ant-[\w-]{20,}", key):
+            return jsonify(error="That doesn't look like an Anthropic API key (it should start with sk-ant-)."), 400
+        with open(games.KEY_PATH, "w", encoding="utf-8") as f:
+            f.write(key)
+    elif request.method == "DELETE":
+        try:
+            os.remove(games.KEY_PATH)
+        except OSError:
+            pass
+    return jsonify(enabled=bool(games.api_key()),
+                   from_env=bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()))
+
+
 @app.post("/api/game")
 def game():
     url = (request.form.get("url") or "").strip()

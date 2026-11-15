@@ -109,12 +109,12 @@
   .row { display: flex; gap: 10px; }
   .field { flex: 1; min-width: 0; position: relative; }
   .field svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--dim); }
-  input[type=text] {
+  .field input {
     width: 100%; background: rgba(0,0,0,.35); border: 1px solid var(--line); color: var(--text);
     border-radius: 13px; padding: 13px 14px 13px 42px; font: inherit; outline: none; transition: .15s;
   }
-  input[type=text]::placeholder { color: var(--dim); }
-  input[type=text]:focus { border-color: var(--mint); box-shadow: 0 0 0 4px rgba(111,242,194,.12); }
+  .field input::placeholder { color: var(--dim); }
+  .field input:focus { border-color: var(--mint); box-shadow: 0 0 0 4px rgba(111,242,194,.12); }
   button { font: inherit; }
   button.go {
     background: var(--grad); color: var(--ink); border: 0; border-radius: 13px; padding: 0 26px;
@@ -174,6 +174,19 @@
   .store.listing { border-color: rgba(111,242,194,.35); background: rgba(111,242,194,.07); }
   .store.listing small { color: var(--mint); font-weight: 600; }
   .store svg { color: var(--muted); flex: none; }
+  .vision { margin-top: 14px; font-size: 13.5px; color: var(--muted); }
+  .vision summary { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; list-style: none; user-select: none; }
+  .vision summary::-webkit-details-marker { display: none; }
+  .vision summary:hover { color: var(--text); }
+  .vdot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+  .vision.on .vdot { background: var(--mint); box-shadow: 0 0 8px var(--mint); }
+  .vision p { margin: 10px 0; max-width: 640px; }
+  .ghost {
+    background: var(--glass2); color: var(--text); border: 1px solid var(--line2); border-radius: 13px;
+    padding: 10px 18px; cursor: pointer; white-space: nowrap; font-weight: 600; transition: .15s;
+  }
+  .ghost:hover { border-color: #7cc8ff; }
+  .gnote { color: var(--warn); font-size: 13.5px; margin: 12px 0 0; }
   .also { color: var(--muted); font-size: 14px; margin-top: 16px; }
   .also a { color: #9fd0ff; }
   @media (max-width: 640px) { .ghero .shot { width: 100%; } }
@@ -305,6 +318,16 @@
         </div>
         <button class="go" id="ggo">Find game</button>
       </div>
+      <details class="vision" id="vision">
+        <summary><span class="vdot"></span><span id="vstate">Picture recognition: checking…</span></summary>
+        <p>With an Anthropic API key, a few frames of the video are sent to Claude when the title and tags don't settle it, so games can be recognised from the picture. Each lookup that uses it costs roughly a few cents on your key. The key is saved only on this PC.</p>
+        <div class="row" id="vform">
+          <div class="field"><input type="password" id="vkey" placeholder="Paste your Anthropic API key (sk-ant-…)" autocomplete="off" style="padding-left:14px"></div>
+          <button class="ghost" id="vsave">Save key</button>
+        </div>
+        <button class="ghost" id="vdel" hidden>Remove saved key</button>
+        <div class="err" id="verr"></div>
+      </details>
       <ul class="steps" id="gsteps"></ul>
       <div class="err" id="gerr"></div>
     </div>
@@ -482,11 +505,33 @@ ggo.onclick = async () => {
   ggo.disabled = false; ggo.textContent = 'Find game';
 };
 
+// picture recognition on/off (the key itself never comes back to the page)
+async function vision(method, body) {
+  const r = await fetch('/api/vision', { method, body });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'Could not save');
+  $('vision').classList.toggle('on', j.enabled);
+  $('vstate').textContent = 'Picture recognition: ' + (j.enabled ? 'on' : 'off — add an AI key to turn it on');
+  $('vform').hidden = j.enabled;
+  $('vdel').hidden = !j.enabled || j.from_env;
+}
+vision('GET').catch(() => {});
+$('vsave').onclick = async () => {
+  $('verr').textContent = '';
+  const fd = new FormData();
+  fd.append('key', $('vkey').value.trim());
+  try { await vision('POST', fd); $('vkey').value = ''; } catch (e) { $('verr').textContent = e.message; }
+};
+$('vdel').onclick = () => vision('DELETE').catch(e => { $('verr').textContent = e.message; });
+
 function renderGame(r) {
   const v = r.video, g = r.game;
   const from = `From “${esc(v.title)}”${v.by ? ` by ${esc(v.by)}` : ''}`;
+  const note = r.note ? `<p class="gnote">${esc(r.note)}</p>` : '';
   if (!g) {
-    $('gout').innerHTML = `<h2>Result</h2><div class="panel">Couldn't tell which game this is. The video's title, tags and description don't name a game that the stores list.<div class="meta">${from}</div></div>`;
+    $('gout').innerHTML = `<h2>Result</h2><div class="panel">Couldn't tell which game this is. ${r.vision
+      ? "Neither the video's text nor its picture settled it."
+      : "The video's title, tags and description don't name a game that the stores list. Turning on picture recognition above lets it look at the footage too."}<div class="meta">${from}</div>${note}</div>`;
     return;
   }
   const conf = { high: ['ok', 'Confident match'], medium: ['ok', 'Likely match'], low: ['wn', 'Best guess'] }[g.confidence];
@@ -495,9 +540,9 @@ function renderGame(r) {
     ${pic ? `<img class="bg" src="${pic}" alt=""><div class="shot"><img src="${pic}" alt=""></div>` : ''}
     <div style="min-width:0;flex:1">
       <div class="t">${esc(g.name)}</div>
-      <div class="why">Picked because ${esc(g.why)}.</div>
+      <div class="why">${g.by_ai ? esc(g.why) : 'Picked because ' + esc(g.why)}.</div>
       <div class="meta">${from}</div>
-      <div class="badges"><span class="badge ${conf[0]}">${conf[1]}</span></div>
+      <div class="badges"><span class="badge ${conf[0]}">${conf[1]}</span>${g.by_ai ? '<span class="badge ok">Recognised from the picture</span>' : ''}</div>${note}
     </div></div>
     <h2>Where to get it</h2><div class="stores">` +
     r.stores.map(s => `<a class="store ${s.kind}" href="${safeUrl(s.url)}" target="_blank" rel="noopener">

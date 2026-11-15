@@ -2,6 +2,7 @@
 __pycache__/
 stem_library.json
 history.json
+.anthropic_key
 *.tmp
 server.out
 server.err
