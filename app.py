@@ -674,6 +674,42 @@ def home():
     )
 
 
+@app.get("/api/search")
+def song_search():
+    """Search bar: look songs up by name."""
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify(items=[])
+    try:
+        items = [dz_track(t) for t in (dz("search", q=q, limit=7).get("data") or [])]
+    except Exception:
+        items = []
+    return jsonify(items=[_slim(t) for t in items])
+
+
+def run_game_job(job, url):
+    import games
+
+    try:
+        job["result"] = games.identify(url, job["steps"].append)
+    except Exception as e:
+        msg = re.sub(r"\x1b\[[0-9;]*m", "", str(e)).replace("ERROR: ", "")
+        job["error"] = msg[:400] or "Something went wrong."
+    finally:
+        job["done"] = True
+
+
+@app.post("/api/game")
+def game():
+    url = (request.form.get("url") or "").strip()
+    if not re.match(r"^https?://", url, re.I):
+        return jsonify(error="Paste a YouTube or TikTok link that starts with http:// or https://"), 400
+    job_id = uuid.uuid4().hex
+    JOBS[job_id] = job = {"steps": [], "done": False}
+    threading.Thread(target=run_game_job, args=(job, url), daemon=True).start()
+    return jsonify(id=job_id)
+
+
 @app.get("/api/preview/<int:track_id>")
 def preview(track_id):
     """Deezer preview links expire after a few minutes, so look up a fresh one per play."""
